@@ -651,6 +651,7 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
 
     // step1
     // Compute the mean of each variable   // μ = (1/n) * ∑(i=1 to n) Xi
+    std::chrono::system_clock::time_point start1 = std::chrono::system_clock::now();
     for(int j = 0; j < matrix[0].size(); j++){
         for(int k = 0; k < length; k++){
             bootsCOPY(&centering[j][k], &matrix[0][j][k], bk);
@@ -665,9 +666,12 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
     for(int i = 0; i < matrix[0].size(); i++){
         newMultiReal(centering[i], centering[i], P2C_1_N, length, bk);
     }
+    std::chrono::duration<float> sec1 = std::chrono::system_clock::now() - start1;
+    std::cout << "(in Chrono) step1 done in " << sec1.count() << " seconds...\n" << std::endl;
 
     // step2
     // Center the data by subtracting the mean from each observation   // Z = X - μ
+    std::chrono::system_clock::time_point start2 = std::chrono::system_clock::now();
     for(int i = 0; i < matrix.size(); i++){
         for(int j = 0; j < matrix[0].size(); j++){
             newSUB(mean_centered_matrix[i][j], matrix[i][j], centering[j], length, bk);
@@ -677,9 +681,13 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
     newTransposeMatrix(transpose_mean_centered_matrix, mean_centered_matrix, length, bk);
     newmultRealMatrix(S, transpose_mean_centered_matrix, mean_centered_matrix, length, bk);
     newScalarMultMatrix2(S, S, P2C_1_N, length, bk);
+    std::chrono::duration<float> sec2 = std::chrono::system_clock::now() - start2;
+    std::cout << "(in Chrono) step2 done in " << sec2.count() << " seconds...\n" << std::endl;
 
     //step3&4    
-    for(int h = 0; h < dimension - 1; h++){                                                           
+    std::chrono::system_clock::time_point start3 = std::chrono::system_clock::now();
+    for(int h = 0; h < dimension - 1; h++){                     
+        std::chrono::system_clock::time_point start3_1 = std::chrono::system_clock::now();                                      
         newDomEigenvector(result, S, number_of_iteration - 1, length, bk);
         newmultRealMatrix(eigenvector2, S, result, length, bk);  
         for (int j = 0; j < matrix[0].size(); j++){
@@ -688,7 +696,10 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
         newMaxValue(max_value, result_temp, length, bk);  
         newRealDiv(norm_constant, P2C_1, max_value, length, bk);
         newScalarMultMatrix2(eigenvector, eigenvector2, norm_constant, length, bk);  /////////this is the dominant eigenvector of S. doing one more iteration on result.
-
+        std::chrono::duration<float> sec3_1 = std::chrono::system_clock::now() - start3_1;
+        std::cout << "(in Chrono) step3_1 done in " << sec3_1.count() << " seconds...\n" << std::endl;
+        
+        std::chrono::system_clock::time_point start3_2 = std::chrono::system_clock::now();  
         newRealDiv(num, eigenvector2[0][0], result[0][0], length, bk);    // eigenvalue = num // eigenvalue associated with 1st dominant eigenvector
 
         for(int k = 0; k < length; k++){
@@ -706,7 +717,10 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
         for(int i = 0; i < matrix[0].size(); i++){
             newMultiReal(normalized[i][0], denominator, eigenvector[i][0], length, bk);        
         }
+        std::chrono::duration<float> sec3_2 = std::chrono::system_clock::now() - start3_2;
+        std::cout << "(in Chrono) step3_2 done in " << sec3_2.count() << " seconds...\n" << std::endl;
 
+        std::chrono::system_clock::time_point start3_3 = std::chrono::system_clock::now(); 
         newTransposeMatrix(transpose_normalized, normalized, length, bk);
 
         newmultRealMatrix(tmp, normalized, transpose_normalized, length, bk);
@@ -725,19 +739,28 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
                 bootsCOPY(&reduced_BasisMatrix[i][h][k], &eigenvector[i][0][k], bk);
             }
         }
+        std::chrono::duration<float> sec3_3 = std::chrono::system_clock::now() - start3_3;
+        std::cout << "(in Chrono) step3_3 done in " << sec3_3.count() << " seconds...\n" << std::endl;
     }
+    std::chrono::duration<float> sec3 = std::chrono::system_clock::now() - start3;
+    std::cout << "(in Chrono) step3 done in " << sec3.count() << " seconds...\n" << std::endl;
 
+    std::chrono::system_clock::time_point start4 = std::chrono::system_clock::now();
     newDomEigenvector(result, S, number_of_iteration, length, bk);         /////////this is the eigenvector of S
     for(int i = 0; i < matrix[0].size(); i++){
         for(int k = 0; k < length; k++){
             bootsCOPY(&reduced_BasisMatrix[i][dimension - 1][k], &result[i][0][k], bk);                 
         }
     }
-
+    std::chrono::duration<float> sec4 = std::chrono::system_clock::now() - start4;
+    std::cout << "(in Chrono) step4 done in " << sec4.count() << " seconds...\n" << std::endl;
 
     //step5
     // Project the data onto the new subspace by computing Z' = ZW   // compute reduced dimensionality data
+    std::chrono::system_clock::time_point start5 = std::chrono::system_clock::now();
     newmultRealMatrix(res, matrix, reduced_BasisMatrix, length, bk);
+    std::chrono::duration<float> sec5 = std::chrono::system_clock::now() - start5;
+    std::cout << "(in Chrono) step5 done in " << sec5.count() << " seconds...\n" << std::endl;
 
 
     delete_gate_bootstrapping_ciphertext_array(length, P2C_N);
