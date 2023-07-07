@@ -190,6 +190,9 @@ vector<vector<float>> DomEigenvector(vector<vector<float>> matrix, const int num
             res[i][0] = result[i][0]*norm_constant;
     }
     for (int h = 0; h < number_of_iteration - 1; h++){
+        for (int i = 0; i < matrix.size(); i++){
+            result[i][0] = 0;
+        }
         for(int i = 0; i < matrix.size(); i++){
             for(int j = 0; j < 1; j++){
                 for(int k = 0; k < matrix.size(); k++){
