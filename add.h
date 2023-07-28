@@ -36,7 +36,7 @@ void newADD(LweSample* res, const LweSample* a, const LweSample* b, const int le
 void bootsBorrow(LweSample* result, const LweSample* ca, const LweSample* cb, const LweSample* cc, const TFheGateBootstrappingCloudKeySet *bk);
 void bootsCompS(LweSample* result, const LweSample* ca, const LweSample* cb, const LweSample* cc, const TFheGateBootstrappingCloudKeySet *bk);
 void bootsCompB(LweSample* result, const LweSample* ca, const LweSample* cb, const LweSample* cc, const TFheGateBootstrappingCloudKeySet *bk);
-void BootsSort(LweSample* res1, LweSample* res2, LweSample* a, LweSample* b, const int length, const TFheGateBootstrappingCloudKeySet* bk);
+// void BootsSort(LweSample* res1, LweSample* res2, LweSample* a, LweSample* b, const int length, const TFheGateBootstrappingCloudKeySet* bk);
 
 void newSUB(LweSample* res, const LweSample* a, const LweSample* b, const int length, const TFheGateBootstrappingCloudKeySet* bk);
 void newABS(LweSample* res, const LweSample* a, const int length, const TFheGateBootstrappingCloudKeySet* bk);

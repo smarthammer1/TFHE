@@ -2,6 +2,7 @@
 #include "Comparator.h"
 #include <tfhe/tfhe_gate_bootstrapping_functions.h>
 #include "HomOper.c"
+#include "newfile.h"
 
 int32_t get_N();
 
@@ -570,40 +571,79 @@ float cov(float *plain_a, float *plain_b, int32_t N) {
     
 }
 
-void BootsSort(LweSample* res1, LweSample* res2, LweSample* a, LweSample* b, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
-	LweSample* temp = new_gate_bootstrapping_ciphertext_array(2, bk->params);
 
-	HomCompLE(&temp[0], a, b, length, bk);
-	bootsNOT(&temp[1], &temp[0], bk);
+// void BootsSort(LweSample* res1, LweSample* res2, LweSample* a, LweSample* b, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
+// 	LweSample* temp = new_gate_bootstrapping_ciphertext_array(2, bk->params);
 
-	for (int i =0; i < length; i++) {
-		bootsMUX(&res1[i], &temp[0], &a[i], &b[i], bk);
-		bootsMUX(&res2[i], &temp[1], &a[i], &b[i], bk);
-	}
+// 	HomCompLE(&temp[0], a, b, length, bk);
+// 	bootsNOT(&temp[1], &temp[0], bk);
 
-	delete_gate_bootstrapping_ciphertext_array(2, temp);	
-}
+// 	for (int i =0; i < length; i++) {
+// 		bootsMUX(&res1[i], &temp[0], &a[i], &b[i], bk);
+// 		bootsMUX(&res2[i], &temp[1], &a[i], &b[i], bk);
+// 	}
 
+// 	delete_gate_bootstrapping_ciphertext_array(2, temp);	
+// }
+
+
+// biggest one is the first one
+// matrix is nx1 matrix
 void newMaxValue(LweSample* res, vector<vector<LweSample*>> matrix, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
+    LweSample* temp = new_gate_bootstrapping_ciphertext_array(2, bk->params);
 	LweSample* result1 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
 	LweSample* result2 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
-	
-    for (int i = 0; i < matrix.size(); i++) {
-	    for (int j = 0; j < matrix[0].size()-1; j++) {
-            // HomMax(result, ciphertext1[j], ciphertext1[j+1], length, bk);
-            // HomMin(result2, ciphertext1[j], ciphertext1[j+1], length, bk);
-			BootsSort(result1, result2, matrix[j][0], matrix[j+1][0], length, bk);
-
+    for (int h = 0; h < matrix.size() - 1; h++) {
+        for (int i = 0; i < matrix.size() - 1 - h; i++) {
+            newCompLE(&temp[0], matrix[i][0], matrix[i+1][0], length, bk); // matrix[i] >= matrix[i+1] -> temp[0] = 1
+            bootsNOT(&temp[1], &temp[0], bk);
             for(int k = 0; k < length; k++){
-                bootsCOPY(&matrix[j][0][k], &result2[k], bk);
-                bootsCOPY(&matrix[j+1][0][k], &result1[k], bk);
+                bootsMUX(&result1[k], &temp[0], &matrix[i][0][k], &matrix[i+1][0][k], bk); // max
+                bootsMUX(&result2[k], &temp[1], &matrix[i][0][k], &matrix[i+1][0][k], bk); // min
+                bootsCOPY(&matrix[i][0][k], &result1[k], bk);
+                bootsCOPY(&matrix[i+1][0][k], &result2[k], bk);
             }
         }
     }
 
-    for (int i = 0; i < length; i++)
-        bootsCOPY(&res[i], &matrix[matrix.size() -1][0][i], bk);
+    // W[][] = [v₁, v₂, ..., vr]   // reduced basis
+    for(int k = 0; k < length; k++){
+        bootsCOPY(&res[k], &matrix[0][0][k], bk);
+    }
 
+    // cout << "maxvalue is first number" << endl;
+    // decrypting_code(matrix, length);
+
+	delete_gate_bootstrapping_ciphertext_array(2, temp);
 	delete_gate_bootstrapping_ciphertext_array(length, result1);
     delete_gate_bootstrapping_ciphertext_array(length, result2);
-}	
+}
+
+
+// // biggest one is the latest one
+// void newMaxValue(LweSample* res, vector<vector<LweSample*>> matrix, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
+// 	LweSample* result1 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+// 	LweSample* result2 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+	
+//     for (int i = 0; i < matrix.size(); i++) {
+// 	    for (int j = 0; j < matrix[0].size()-1; j++) {
+//             // HomMax(result, ciphertext1[j], ciphertext1[j+1], length, bk);
+//             // HomMin(result2, ciphertext1[j], ciphertext1[j+1], length, bk);
+// 			BootsSort(result1, result2, matrix[j][0], matrix[j+1][0], length, bk);
+
+//             for(int k = 0; k < length; k++){
+//                 bootsCOPY(&matrix[j][0][k], &result2[k], bk);
+//                 bootsCOPY(&matrix[j+1][0][k], &result1[k], bk);
+//             }
+//         }
+//     }
+
+//     cout << "maxvalue is last number" << endl;
+//     decrypting_code(matrix, length);
+
+//     for (int i = 0; i < length; i++)
+//         bootsCOPY(&res[i], &matrix[matrix.size() -1][0][i], bk);
+
+// 	delete_gate_bootstrapping_ciphertext_array(length, result1);
+//     delete_gate_bootstrapping_ciphertext_array(length, result2);
+// }	

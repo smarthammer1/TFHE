@@ -1,4 +1,11 @@
 #include <cmath>
+#include <tfhe/tfhe.h>
+#include <tfhe/tfhe_io.h>
+#include <iostream>
+#include <math.h>
+#include "add.h"
+#include "newfile.h"
+#include <tfhe/tfhe_gate_bootstrapping_functions.h>
 using namespace std;
 
 vector<float> PCAMatrix_step1(vector<vector<float>> matrix) {
@@ -165,10 +172,7 @@ vector<vector<float>> PCAMatrix_step3_4_reducedbasis(vector<vector<float>> matri
     return plainres;
 }
 
-
-
-
-// // change number of dimensionality -> then change everything else related to it.
+// change number of dimensionality -> then change everything else related to it.
 vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_of_iteration, const int dimension){
     vector<vector<float>> plainres(matrix.size(), vector<float>(dimension));    
     vector<float> centering(matrix[0].size());
@@ -212,6 +216,15 @@ vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_o
         }                                  
     }
 
+    cout << "covariance matrix" << endl;
+    for(int i = 0; i < matrix.size(); i++) {
+        for(int j = 0; j < matrix[0].size(); j++) {
+            cout << S[i][j] << "  ";
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+
     //step3&4  
      for(int h = 0; h < dimension - 1; h++){    
         result = DomEigenvector(S, number_of_iteration - 1);
@@ -235,6 +248,12 @@ vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_o
                 eigenvector[i][0] = eigenvector2[i][0]*norm_constant;        /////////this is the dominant eigenvector of S. doing one more iteration on result.
         }    
 
+        cout << "== %dth eigenvector ==", h+1 << endl;
+        for(int i = 0; i < matrix[0].size(); i++) {
+            cout << eigenvector[i][0] << "\n";
+        }
+        cout << "\n";
+
         float num = eigenvector2[0][0] / result[0][0];       ///eigenvalue end///// eigenvalue = num
 
         float sqsum = 0;
@@ -256,7 +275,16 @@ vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_o
         }
 
         S = SubtractMatrix(S, tmp);                            ///////deflated matrix
-
+        
+        cout << "%dth deflated matrix", h+1 << endl;
+        for(int i = 0; i < matrix[0].size(); i++) {
+            for(int j = 0; j < matrix[0].size(); j++) {
+                cout << S[i][j] << "  ";;
+            }
+            cout << "\n";
+        }
+        cout << "\n";
+        
         for(int i = 0; i < matrix[0].size(); i++){
             reduced_basisMatrix[i][h] = eigenvector[i][0];
         }
@@ -267,8 +295,13 @@ vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_o
         reduced_basisMatrix[i][dimension - 1] = result[i][0];
     }
 
+    cout << "== %dth eigenvector ==", dimension << endl;
+    for(int i = 0; i < matrix[0].size(); i++){
+        cout << result[i][0] << "\n";
+    }
+    cout << "\n";
 
-    cout << "reduced basis matrix is\n";
+    cout << "reduced basis matrix : EIGENVECTOR MATRIX is\n";
     for(int i = 0; i < matrix[0].size(); i++){
         for(int j = 0; j < dimension; j++){                           
             cout << reduced_basisMatrix[i][j] << "  ";
@@ -283,15 +316,6 @@ vector<vector<float>> PCAMatrix(vector<vector<float>> matrix, const int number_o
 
     return plainres;
 }
-
-
-
-
-
-
-
-
-
 
 void newPCAMatrix_step1(vector<vector<LweSample*>> res, vector<vector<LweSample*>> matrix, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
 	vector<LweSample*> centering(matrix[0].size());
@@ -337,7 +361,6 @@ void newPCAMatrix_step1(vector<vector<LweSample*>> res, vector<vector<LweSample*
     delete_gate_bootstrapping_ciphertext_array(length, P2C_1);
     delete_gate_bootstrapping_ciphertext_array(length, P2C_1_N);
 }
-
 
 void newPCAMatrix_step2(vector<vector<LweSample*>> res, vector<vector<LweSample*>> matrix, vector<LweSample*> centering, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
     LweSample* P2C_N = new_gate_bootstrapping_ciphertext_array(length, bk->params);
@@ -423,7 +446,6 @@ void newPCAMatrix_step4(vector<vector<LweSample*>> res, vector<vector<LweSample*
     delete_gate_bootstrapping_ciphertext_array(2, temp);
 }
 
-
 void newPCAMatrix_step5(vector<vector<LweSample*>> res, vector<vector<LweSample*>> aMatrix, vector<vector<LweSample*>> reduced_Matrix, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
     vector<vector<LweSample*>> transpose_reducedMatrix(reduced_Matrix[0].size(), vector<LweSample*>(reduced_Matrix.size()));
 	for(int i = 0; i < reduced_Matrix[0].size(); i++){
@@ -454,9 +476,6 @@ void newPCAMatrix_step5(vector<vector<LweSample*>> res, vector<vector<LweSample*
         }
 	}	
 }
-
-
-
 
 void newPCAMatrix_step3_4_reducedbasis(vector<vector<LweSample*>> res, vector<vector<LweSample*>> matrix, const int number_of_iteration, const int dimension, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
     vector<vector<LweSample*>> result(matrix.size(), vector<LweSample*>(1));
@@ -540,7 +559,101 @@ void newPCAMatrix_step3_4_reducedbasis(vector<vector<LweSample*>> res, vector<ve
                 bootsCOPY(&reduced_basisMatrix[i][h][k], &eigenvector[i][0][k], bk);
             }
         }
+    }
+}
+
+
+//decrypting the code in the middle 
+//trying to find out what is the problem
+void newPCAMatrix_step3_4_reducedbasis_decryptversion(vector<vector<LweSample*>> res, vector<vector<LweSample*>> matrix, const int number_of_iteration, const int dimension, const int length, const TFheGateBootstrappingCloudKeySet* bk) {
+    vector<vector<LweSample*>> result(matrix.size(), vector<LweSample*>(1));
+    vector<vector<LweSample*>> eigenvector(matrix.size(), vector<LweSample*> (1));
+    vector<vector<LweSample*>> eigenvector2(matrix.size(), vector<LweSample*> (1));
+    vector<vector<LweSample*>> result_temp(matrix.size(), vector<LweSample*> (1));
+    for(int i = 0; i < matrix.size(); i++){
+        result[i][0] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        eigenvector[i][0] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        eigenvector2[i][0] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        result_temp[i][0] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    }
+    LweSample* max_value = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* norm_constant = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* denominator = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* num = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* P2C_1 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    vector<vector<LweSample*>> tmp(matrix.size(), vector<LweSample*>(matrix.size()));
+	for(int i = 0; i < matrix.size(); i++){
+        for(int j = 0; j < matrix.size(); j++){
+            tmp[i][j] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        }
+	}
+    vector<vector<LweSample*>> reduced_basisMatrix(matrix.size(), vector<LweSample*>(dimension));        
+	for(int i = 0; i < matrix.size(); i++){
+        for(int j = 0; j < dimension; j++){
+            reduced_basisMatrix[i][j] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        }
+	}
+    LweSample* sqsum = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* square = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    LweSample* sqroot = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    vector<vector<LweSample*>> normalized(matrix.size(), vector<LweSample*>(1));
+    vector<vector<LweSample*>> transpose_normalized(1, vector<LweSample*>(matrix.size()));
+    for(int i = 0; i < matrix.size(); i++){
+        normalized[i][0] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+        transpose_normalized[0][i] = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+    }
+
+    newP2C(P2C_1, 1, length, bk);
+    for(int h = 0; h < dimension - 1; h++){                                                      
+        newDomEigenvector(result, matrix, number_of_iteration - 1, length, bk);
+        newmultRealMatrix(eigenvector2, matrix, result, length, bk); 
+        for (int j = 0; j < matrix.size(); j++){
+            newABS(result_temp[j][0], eigenvector2[j][0], length, bk);
+        }
+        newMaxValue(max_value, result_temp, length, bk);  
+        newRealDiv(norm_constant, P2C_1, max_value, length, bk);
+        newScalarMultMatrix2(eigenvector, eigenvector2, norm_constant, length, bk);  /////////this is the dominant eigenvector of S. doing one more iteration on result.
+        
+        decrypting_code(eigenvector, length);
+
+        newRealDiv(denominator, P2C_1, result[0][0], length, bk);
+        newMultiReal(num, eigenvector2[0][0], denominator, length, bk);          // eigenvalue = num // eigenvalue associated with 1st dominant eigenvector
+
+        ////deflated matrix -> matrix
+        for(int k = 0; k < length; k++){
+            bootsCONSTANT(&sqsum[k], 0, bk);
+        }
+        for(int i = 0; i < matrix.size(); i++){
+            newMultiReal(square, eigenvector[i][0], eigenvector[i][0], length, bk);
+            newADD(sqsum, sqsum, square, length, bk);
+        }
+        HomSqroot(sqroot, sqsum, length, bk);                         // sqareroot of sqsum ////////////////////////////////////////////
+        newRealDiv(denominator, P2C_1, sqroot, length, bk);
+        for(int i = 0; i < matrix.size(); i++){
+            newMultiReal(normalized[i][0], denominator, eigenvector[i][0], length, bk);        
+        }
+        newTransposeMatrix(transpose_normalized, normalized, length, bk);
+        newmultRealMatrix(tmp, normalized, transpose_normalized, length, bk);
+
+        #pragma omp parallel for
+        for(int i = 0; i < matrix.size(); i++){
+            for(int j = 0; j < matrix.size(); j++){
+                newMultiReal(tmp[i][j], num, tmp[i][j], length, bk);        
+            }
+        }
+
+        newSubMatrix(matrix, matrix, tmp, length, bk);                          ///////deflated matrix
+
+        decrypting_code(matrix, length);
+
+        for(int i = 0; i < matrix.size(); i++){
+            for(int k = 0; k < length; k++){
+                bootsCOPY(&reduced_basisMatrix[i][h][k], &eigenvector[i][0][k], bk);
+            }
+        }
     }   
+
+
 
     newDomEigenvector(result, matrix, number_of_iteration, length, bk);         /////////this is the eigenvector of S
     for(int i = 0; i < matrix.size(); i++){
@@ -583,8 +696,6 @@ void newPCAMatrix_step3_4_reducedbasis(vector<vector<LweSample*>> res, vector<ve
         }
     }
 }
-
-
 
 
 
@@ -651,6 +762,8 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
 
     // step1
     // Compute the mean of each variable   // μ = (1/n) * ∑(i=1 to n) Xi
+    std::chrono::system_clock::time_point start1 = std::chrono::system_clock::now();
+
     for(int j = 0; j < matrix[0].size(); j++){
         for(int k = 0; k < length; k++){
             bootsCOPY(&centering[j][k], &matrix[0][j][k], bk);
@@ -666,28 +779,56 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
         newMultiReal(centering[i], centering[i], P2C_1_N, length, bk);
     }
 
+    std::chrono::duration<float> sec1 = std::chrono::system_clock::now() - start1;
+    std::cout << "(in Chrono) step1 done in " << sec1.count() << " seconds...\n" << std::endl;
+
     // step2
     // Center the data by subtracting the mean from each observation   // Z = X - μ
+    std::chrono::system_clock::time_point start2 = std::chrono::system_clock::now();
+
     for(int i = 0; i < matrix.size(); i++){
         for(int j = 0; j < matrix[0].size(); j++){
             newSUB(mean_centered_matrix[i][j], matrix[i][j], centering[j], length, bk);
         }
     }
+    
     // Compute the covariance matrix   // S = (1/n) * ZᵀZ
     newTransposeMatrix(transpose_mean_centered_matrix, mean_centered_matrix, length, bk);
     newmultRealMatrix(S, transpose_mean_centered_matrix, mean_centered_matrix, length, bk);
     newScalarMultMatrix2(S, S, P2C_1_N, length, bk);
+    
+    cout << "covariance matrix" << endl;
+    decrypting_code(S, length);
+    
+    std::chrono::duration<float> sec2 = std::chrono::system_clock::now() - start2;
+    std::cout << "(in Chrono) step2 done in " << sec2.count() << " seconds...\n" << std::endl;
 
     //step3&4    
-    for(int h = 0; h < dimension - 1; h++){                                                           
+    std::chrono::system_clock::time_point start3 = std::chrono::system_clock::now();
+
+    for(int h = 0; h < dimension - 1; h++){        
+        std::chrono::system_clock::time_point start3_1 = std::chrono::system_clock::now();
+
         newDomEigenvector(result, S, number_of_iteration - 1, length, bk);
-        newmultRealMatrix(eigenvector2, S, result, length, bk);  
+        newmultRealMatrix(eigenvector2, S, result, length, bk);
+
+        // cout << "before normalizing\n";
+        // decrypting_code(eigenvector2, length);
+
         for (int j = 0; j < matrix[0].size(); j++){
             newABS(result_temp[j][0], eigenvector2[j][0], length, bk);
         }
         newMaxValue(max_value, result_temp, length, bk);  
         newRealDiv(norm_constant, P2C_1, max_value, length, bk);
         newScalarMultMatrix2(eigenvector, eigenvector2, norm_constant, length, bk);  /////////this is the dominant eigenvector of S. doing one more iteration on result.
+
+        cout << "== %dth eigenvector ==",h+1 << endl;
+        decrypting_code(eigenvector, length);
+
+        std::chrono::duration<float> sec3_1 = std::chrono::system_clock::now() - start3_1;
+        std::cout << "(in Chrono) step3_1 done in " << sec3_1.count() << " seconds...\n" << std::endl;
+        
+        std::chrono::system_clock::time_point start3_2 = std::chrono::system_clock::now();  
 
         newRealDiv(num, eigenvector2[0][0], result[0][0], length, bk);    // eigenvalue = num // eigenvalue associated with 1st dominant eigenvector
 
@@ -700,15 +841,18 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
         }
 
         HomSqroot(sqroot, sqsum, length, bk);                         // sqareroot of sqsum ////////////////////////////////////////////
-
         newRealDiv(denominator, P2C_1, sqroot, length, bk);
 
         for(int i = 0; i < matrix[0].size(); i++){
             newMultiReal(normalized[i][0], denominator, eigenvector[i][0], length, bk);        
         }
 
-        newTransposeMatrix(transpose_normalized, normalized, length, bk);
+        std::chrono::duration<float> sec3_2 = std::chrono::system_clock::now() - start3_2;
+        std::cout << "(in Chrono) step3_2 done in " << sec3_2.count() << " seconds...\n" << std::endl;
 
+        std::chrono::system_clock::time_point start3_3 = std::chrono::system_clock::now();
+
+        newTransposeMatrix(transpose_normalized, normalized, length, bk);
         newmultRealMatrix(tmp, normalized, transpose_normalized, length, bk);
 
         #pragma omp parallel for
@@ -720,12 +864,21 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
 
         newSubMatrix(S, S, tmp, length, bk);                          ///////deflated matrix
 
+        cout << "%dth deflated matrix",h+1 << endl;
+        decrypting_code(S, length);
+
         for(int i = 0; i < matrix[0].size(); i++){
             for(int k = 0; k < length; k++){
                 bootsCOPY(&reduced_BasisMatrix[i][h][k], &eigenvector[i][0][k], bk);
             }
         }
+        std::chrono::duration<float> sec3_3 = std::chrono::system_clock::now() - start3_3;
+        std::cout << "(in Chrono) step3_3 done in " << sec3_3.count() << " seconds...\n" << std::endl;
     }
+    std::chrono::duration<float> sec3 = std::chrono::system_clock::now() - start3;
+    std::cout << "(in Chrono) step3 done in " << sec3.count() << " seconds...\n" << std::endl;
+
+    std::chrono::system_clock::time_point start4 = std::chrono::system_clock::now();
 
     newDomEigenvector(result, S, number_of_iteration, length, bk);         /////////this is the eigenvector of S
     for(int i = 0; i < matrix[0].size(); i++){
@@ -734,10 +887,29 @@ void newPCAMatrix(vector<vector<LweSample*>> res, vector<vector<LweSample*>> mat
         }
     }
 
+    cout << "== %dth eigenvector ==",dimension << endl;
+    decrypting_code(result, length);
+
+    cout << "reduced basis matrix : EIGENVECTOR MATRIX";
+    decrypting_code(reduced_BasisMatrix, length);
+
+    std::chrono::duration<float> sec4 = std::chrono::system_clock::now() - start4;
+    std::cout << "(in Chrono) step4 done in " << sec4.count() << " seconds...\n" << std::endl;
 
     //step5
     // Project the data onto the new subspace by computing Z' = ZW   // compute reduced dimensionality data
+    std::chrono::system_clock::time_point start5 = std::chrono::system_clock::now();
+
+    // cout << "matrix A" << endl;
+    // decrypting_code(matrix, length);
+
     newmultRealMatrix(res, matrix, reduced_BasisMatrix, length, bk);
+
+    cout << "final result : PCA" << endl;
+    decrypting_code(res, length);
+
+    std::chrono::duration<float> sec5 = std::chrono::system_clock::now() - start5;
+    std::cout << "(in Chrono) step5 done in " << sec5.count() << " seconds...\n" << std::endl;
 
 
     delete_gate_bootstrapping_ciphertext_array(length, P2C_N);

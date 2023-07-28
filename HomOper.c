@@ -830,29 +830,29 @@ void newCovar(LweSample* res, LweSample** a, LweSample** b, const int length, co
 }
 
 
-void HomMaxValue(LweSample* res, LweSample** a, const int length, const int N, const TFheGateBootstrappingCloudKeySet* bk) {
-	LweSample* result1 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
-	LweSample* result2 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+// void HomMaxValue(LweSample* res, LweSample** a, const int length, const int N, const TFheGateBootstrappingCloudKeySet* bk) {
+// 	LweSample* result1 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
+// 	LweSample* result2 = new_gate_bootstrapping_ciphertext_array(length, bk->params);
 	
-    for (int i = 0; i < N; i++) {
-	    for (int j = 0; j < N-1; j++) {
-            // HomMax(result, ciphertext1[j], ciphertext1[j+1], length, bk);
-            // HomMin(result2, ciphertext1[j], ciphertext1[j+1], length, bk);
-			BootsSort(result1, result2, a[j], a[j+1], length, bk);
+//     for (int i = 0; i < N; i++) {
+// 	    for (int j = 0; j < N-1; j++) {
+//             // HomMax(result, ciphertext1[j], ciphertext1[j+1], length, bk);
+//             // HomMin(result2, ciphertext1[j], ciphertext1[j+1], length, bk);
+// 			BootsSort(result1, result2, a[j], a[j+1], length, bk);
 
-            for(int k = 0; k < length; k++)
-                bootsCOPY(&a[j][k], &result2[k], bk);
-            for(int k = 0; k < length; k++)
-                bootsCOPY(&a[j+1][k], &result1[k], bk);
-        }
-    }
+//             for(int k = 0; k < length; k++)
+//                 bootsCOPY(&a[j][k], &result2[k], bk);
+//             for(int k = 0; k < length; k++)
+//                 bootsCOPY(&a[j+1][k], &result1[k], bk);
+//         }
+//     }
 
-    for (int i = 0; i < length; i++)
-        bootsCOPY(&res[i], &a[N - 1][i], bk);
+//     for (int i = 0; i < length; i++)
+//         bootsCOPY(&res[i], &a[N - 1][i], bk);
 
-	delete_gate_bootstrapping_ciphertext_array(length, result1);
-    delete_gate_bootstrapping_ciphertext_array(length, result2);
-}	
+// 	delete_gate_bootstrapping_ciphertext_array(length, result1);
+//     delete_gate_bootstrapping_ciphertext_array(length, result2);
+// }	
 
 void HomSqroot(LweSample* res, LweSample* a, const int length, const TFheGateBootstrappingCloudKeySet* bk) {  	
 	// 1. For future release, please change RShift and LShift ! :( After the change, PLEASE DELETE THIS LINE :)
